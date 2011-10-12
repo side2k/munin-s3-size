@@ -1,6 +1,10 @@
 #!/usr/bin/python
 from datetime import datetime
 import subprocess
+import os
+
+CACHE_PATH_DEFAULT = '/tmp/munin_s3_bucket_size.cache'
+CACHE_MAX_LIFE = 30 #seconds
 
 def get_file_list():
     process = subprocess.Popen(['s3cmd', 'la', '-r'], stdout=subprocess.PIPE)
@@ -13,13 +17,15 @@ def parse_list(lines):
             continue
         fields = [field for field in line.strip().split(' ') if field]
         result.append({
-            'timestamp':datetime.strptime('%s %s' % (fields[0], fields[1]),'%Y-%m-%d %H:%M'),
+            'timestamp':datetime.strptime(
+                '%s %s' % (fields[0], fields[1]),
+                '%Y-%m-%d %H:%M'),
             'size':int(fields[2]),
             'path':fields[3]})
     return result
     
 def get_bucket_name(path):
-    (bucket_name,_,tail) = path.replace('s3://','',1).partition('/')
+    (bucket_name, _, _) = path.replace('s3://', '', 1).partition('/')
     return bucket_name
     
 def aggregate_results(data):
@@ -32,8 +38,24 @@ def aggregate_results(data):
             result[bucket_name] = element['size']
     return result
     
-
-lines = get_file_list()
-bucket_sizes = aggregate_results(parse_list(lines))
+def get_cached_data(cache_path = CACHE_PATH_DEFAULT):
+    stat = os.stat(cache_path)
+    cache_update = datetime.fromtimestamp(stat.st_mtime)
+    update_delta = datetime.now() - cache_update
+    
+    if update_delta.days * 86400 + update_delta.seconds > CACHE_MAX_LIFE:
+        s3_list = get_file_list()
+        cache_file = open(cache_path, 'w')
+        cache_file.writelines(s3_list)
+        cache_file.close()
+    else:
+        cache_file = open(cache_path, 'r')
+        s3_list = cache_file.readlines()
+        cache_file.close()
+        
+    return parse_list(s3_list)
+    
+   
+bucket_sizes = aggregate_results(get_cached_data())
 for bucket, size in bucket_sizes.iteritems():
     print '%s: %.3dM' % (bucket, size/1024/1024)
