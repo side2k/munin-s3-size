@@ -12,7 +12,7 @@ Plugin uses s3cmd command to list buckets.
 Installation
 ==============
 
-As root(or using sudo):	
+As root(or using sudo):    
 ::
 	cd /etc/munin/plugins
 	ln -s /path/to/s3_bucket_plugin
@@ -36,9 +36,11 @@ Also, you can configure **s3_cache_expiry** option, which points, in seconds, ho
 
 Example config
 ==============
+Here's the sample config:
+
 ::
 	[s3_bucket_size]
 	user jack
 	env.s3_cache_expires 600 
 	
-...and plugin will update your bucket sizes every	10 minutes, and plugin will run under user jack.
+With this config plugin will update your bucket sizes every	10 minutes, and plugin will run under user jack.
