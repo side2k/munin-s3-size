@@ -73,6 +73,7 @@ for arg in sys.argv:
         continue
     switch = arg.lower()
     if switch == 'config':
+        print 'graph_category Disk'
         print 'graph_title Amazon S3 storage usage per bucket'
         print 'graph_vlabel bytes'
         bucket_sizes = aggregate_results(get_cached_data())
