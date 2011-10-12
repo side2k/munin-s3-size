@@ -1,10 +1,10 @@
 #!/usr/bin/python
 from datetime import datetime
 import subprocess
-import os
+import os, sys
 
 CACHE_PATH_DEFAULT = '/tmp/munin_s3_bucket_size.cache'
-CACHE_MAX_LIFE = 30 #seconds
+CACHE_MAX_LIFE = 3600 #seconds
 
 def get_file_list():
     process = subprocess.Popen(['s3cmd', 'la', '-r'], stdout=subprocess.PIPE)
@@ -39,11 +39,14 @@ def aggregate_results(data):
     return result
     
 def get_cached_data(cache_path = CACHE_PATH_DEFAULT):
-    stat = os.stat(cache_path)
-    cache_update = datetime.fromtimestamp(stat.st_mtime)
-    update_delta = datetime.now() - cache_update
-    
-    if update_delta.days * 86400 + update_delta.seconds > CACHE_MAX_LIFE:
+    cache_valid = False
+    if os.path.exists(cache_path):
+        stat = os.stat(cache_path)
+        cache_update = datetime.fromtimestamp(stat.st_mtime)
+        update_delta = datetime.now() - cache_update
+        cache_valid = (update_delta.days * 86400 + update_delta.seconds) < CACHE_MAX_LIFE
+        
+    if not cache_valid:
         s3_list = get_file_list()
         cache_file = open(cache_path, 'w')
         cache_file.writelines(s3_list)
@@ -54,8 +57,29 @@ def get_cached_data(cache_path = CACHE_PATH_DEFAULT):
         cache_file.close()
         
     return parse_list(s3_list)
-    
+
+def normalize_name(name):
+    result = name.replace('.','_')
+    result = result.replace(' ','_')
+    return result
    
+
+args_started = False    
+for arg in sys.argv:
+    if arg == __file__:
+        args_started = True
+        continue
+    switch = arg.lower()
+    if switch == 'config':
+        print 'graph_title Amazon S3 storage usage per bucket'
+        print 'graph_vlabel bytes'
+        bucket_sizes = aggregate_results(get_cached_data())
+        for bucket, size in bucket_sizes.iteritems():
+            print '%s.label %s' % (normalize_name(bucket), bucket)
+            
+        sys.exit()
+        
 bucket_sizes = aggregate_results(get_cached_data())
 for bucket, size in bucket_sizes.iteritems():
-    print '%s: %.3dM' % (bucket, size/1024/1024)
+    print '%s.value %d' % (normalize_name(bucket), size)
+    
