@@ -2,6 +2,7 @@
 from datetime import datetime
 import subprocess
 import os, sys, stat
+import re
 
 CACHE_PATH_DEFAULT = '/tmp/munin_s3_bucket_size.cache'
 CACHE_MAX_LIFE = 3600 #seconds
@@ -44,7 +45,8 @@ def get_cached_data(cache_path = CACHE_PATH_DEFAULT):
         file_stats = os.stat(cache_path)
         cache_update = datetime.fromtimestamp(file_stats.st_mtime)
         update_delta = datetime.now() - cache_update
-        cache_valid = (update_delta.days * 86400 + update_delta.seconds) < CACHE_MAX_LIFE
+        cache_valid = \
+            (update_delta.days * 86400 +update_delta.seconds) < CACHE_MAX_LIFE
         
     if not cache_valid:
         s3_list = get_file_list()
@@ -60,9 +62,8 @@ def get_cached_data(cache_path = CACHE_PATH_DEFAULT):
     return parse_list(s3_list)
 
 def normalize_name(name):
-    result = name.replace('.','_')
-    result = result.replace(' ','_')
-    return result
+    normal_first = re.sub(r'^[^A-Za-z_]', r'_', name)
+    return re.sub(r'[^A-Za-z0-9_]', r'_', normal_first)
    
 
 args_started = False    
