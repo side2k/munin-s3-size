@@ -1,7 +1,7 @@
 #!/usr/bin/python
 from datetime import datetime
 import subprocess
-import os, sys
+import os, sys, stat
 
 CACHE_PATH_DEFAULT = '/tmp/munin_s3_bucket_size.cache'
 CACHE_MAX_LIFE = 3600 #seconds
@@ -41,8 +41,8 @@ def aggregate_results(data):
 def get_cached_data(cache_path = CACHE_PATH_DEFAULT):
     cache_valid = False
     if os.path.exists(cache_path):
-        stat = os.stat(cache_path)
-        cache_update = datetime.fromtimestamp(stat.st_mtime)
+        file_stats = os.stat(cache_path)
+        cache_update = datetime.fromtimestamp(file_stats.st_mtime)
         update_delta = datetime.now() - cache_update
         cache_valid = (update_delta.days * 86400 + update_delta.seconds) < CACHE_MAX_LIFE
         
@@ -51,6 +51,7 @@ def get_cached_data(cache_path = CACHE_PATH_DEFAULT):
         cache_file = open(cache_path, 'w')
         cache_file.writelines(s3_list)
         cache_file.close()
+        os.chmod(cache_path, stat.S_IRUSR | stat.S_IWUSR)
     else:
         cache_file = open(cache_path, 'r')
         s3_list = cache_file.readlines()
