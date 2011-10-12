@@ -36,6 +36,7 @@ Also, you can configure **s3_cache_expiry** option, which points, in seconds, ho
 
 Example config
 ==============
+
 Here's the sample config:
 
 ::
