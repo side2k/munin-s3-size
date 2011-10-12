@@ -26,7 +26,7 @@ Put this in your /etc/munin/plugin-conf.d/munin-node (or whatever) file:
 	[s3_bucket_size]
 	user <your_username>
 
-***your_username*** should have .s3cfg file in his home directory. You can generate this file by running command below:
+**your_username** should have .s3cfg file in his home directory. You can generate this file by running command below:
 ::
 	s3cmd --configure
 
