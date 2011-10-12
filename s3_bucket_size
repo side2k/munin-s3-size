@@ -5,7 +5,7 @@ import os, sys, stat
 import re
 
 CACHE_PATH_DEFAULT = '/tmp/munin_s3_bucket_size.cache'
-CACHE_MAX_LIFE = 3600 #seconds
+CACHE_EXPIRES_DEFAULT = 3600 #seconds
 
 def get_file_list():
     process = subprocess.Popen(['s3cmd', 'la', '-r'], stdout=subprocess.PIPE)
@@ -40,13 +40,20 @@ def aggregate_results(data):
     return result
     
 def get_cached_data(cache_path = CACHE_PATH_DEFAULT):
+    if 's3_cache_expires' in os.environ:
+        try:
+            cache_expires = int(os.environ['s3_cache_expires'])
+        except:
+            cache_expires = CACHE_EXPIRES_DEFAULT
+    else:
+        cache_expires = CACHE_EXPIRES_DEFAULT
     cache_valid = False
     if os.path.exists(cache_path):
         file_stats = os.stat(cache_path)
         cache_update = datetime.fromtimestamp(file_stats.st_mtime)
         update_delta = datetime.now() - cache_update
         cache_valid = \
-            (update_delta.days * 86400 +update_delta.seconds) < CACHE_MAX_LIFE
+            (update_delta.days * 86400 +update_delta.seconds) < CACHE_EXPIRES_DEFAULT
         
     if not cache_valid:
         s3_list = get_file_list()
